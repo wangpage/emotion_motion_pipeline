@@ -1,0 +1,15 @@
+# 核心（管线运行必需）
+numpy>=1.24
+pyyaml>=6.0
+
+# 仿真播放（可选：装了才有 MuJoCo 窗口；不装则 headless 干跑）
+mujoco>=3.0
+
+# 录制 GIF（可选）
+imageio>=2.31
+
+# LLM 意图放大（可选：设 ANTHROPIC_API_KEY 后启用，否则用规则版）
+# anthropic>=0.40
+
+# —— 真·一句话生成（Stage 2 = MLD/MotionGPT，需自行按官方装，通常要 CUDA GPU）——
+# 见 README『接入 MLD』。本仓库不强制依赖，未接入时回退 procedural。

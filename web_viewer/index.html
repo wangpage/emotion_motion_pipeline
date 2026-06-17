@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Robot Viewer — souyan-robot</title>
+<link rel="stylesheet" href="style.css" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+    "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+    "urdf-loader": "https://cdn.jsdelivr.net/npm/urdf-loader@0.12.6/src/URDFLoader.js"
+  }
+}
+</script>
+</head>
+<body>
+
+<!-- 顶部工具栏 -->
+<div id="toolbar">
+  <div class="group">
+    <button class="pill" data-toggle="visual">视觉</button>
+    <button class="pill" data-toggle="collision">碰撞</button>
+    <button class="pill" data-toggle="inertia">惯量</button>
+    <button class="pill" data-toggle="com">质心</button>
+    <button class="pill" data-toggle="axes">坐标轴</button>
+    <button class="pill" data-toggle="jointaxes">关节轴</button>
+    <button class="pill active" data-toggle="shadow">阴影</button>
+    <button class="pill active" data-toggle="light">光照</button>
+  </div>
+  <div class="group">
+    <select id="upaxis" class="pill select">
+      <option value="z">+Z</option>
+      <option value="y">+Y</option>
+    </select>
+  </div>
+  <div class="group">
+    <button class="pill active" data-panel="files">文件</button>
+    <button class="pill active" data-panel="joints">关节</button>
+    <button class="pill active" data-panel="structure">结构</button>
+    <button class="pill active" data-panel="editor">编辑</button>
+  </div>
+  <div class="group">
+    <button class="pill ghost" id="help-btn">帮助</button>
+    <button class="pill ghost" id="lang-btn">Language</button>
+    <button class="pill ghost" id="theme-btn">🌙</button>
+  </div>
+</div>
+
+<!-- 3D 画布 -->
+<div id="viewport"></div>
+
+<!-- 重置/仿真悬浮按钮 -->
+<div id="center-actions" class="hidden">
+  <button class="pill" id="reset-pose">重置</button>
+  <button class="pill" id="sim-btn">仿真</button>
+</div>
+
+<!-- 文件面板 -->
+<section class="panel" id="panel-files" style="left:16px; top:64px; width:420px;">
+  <header><span>文件</span><div class="actions"><button class="ic" data-max>⛶</button><button class="ic" data-close>✕</button></div></header>
+  <div class="body" id="files-body">
+    <div class="empty">
+      <p>拖拽机器人模型文件或文件夹到页面任意位置<br/>或点击下面的按钮加载</p>
+      <div class="row">
+        <button class="btn" id="load-file">加载文件</button>
+        <button class="btn" id="load-folder">加载文件夹</button>
+      </div>
+      <input type="file" id="file-input" multiple hidden />
+      <input type="file" id="folder-input" webkitdirectory directory multiple hidden />
+    </div>
+  </div>
+</section>
+
+<!-- 关节面板 -->
+<section class="panel" id="panel-joints" style="left:16px; bottom:48px; width:440px; max-height:46vh;">
+  <header>
+    <span>关节</span>
+    <div class="seg">
+      <button class="seg-btn active" id="rad-btn">弧度</button>
+      <button class="seg-btn" id="deg-btn">角度</button>
+      <button class="seg-btn solo" id="reset-joints">重置</button>
+      <button class="seg-btn active solo" id="limit-btn">限位</button>
+    </div>
+    <div class="actions"><button class="ic" data-max>⛶</button><button class="ic" data-close>✕</button></div>
+  </header>
+  <div class="body" id="joints-body"><div class="muted">未加载模型</div></div>
+</section>
+
+<!-- 结构面板 -->
+<section class="panel" id="panel-structure" style="right:16px; top:64px; width:420px; max-height:42vh;">
+  <header><span>结构</span><div class="actions"><button class="ic" data-max>⛶</button><button class="ic" data-close>✕</button></div></header>
+  <div class="hint">拖动: 移动 | 滚轮: 缩放 | 右键: 隐藏/显示 | Ctrl+左键: 测量</div>
+  <div class="body" id="structure-body"><div class="muted">未加载模型</div></div>
+</section>
+
+<!-- 编辑面板 -->
+<section class="panel" id="panel-editor" style="right:16px; bottom:48px; width:440px; max-height:42vh;">
+  <header>
+    <span>编辑</span>
+    <div class="actions">
+      <button class="btn sm" id="reload-src">重新加载</button>
+      <button class="btn sm primary" id="download-src">下载</button>
+      <button class="ic" data-max>⛶</button><button class="ic" data-close>✕</button>
+    </div>
+  </header>
+  <div class="filebar"><span id="src-name">—</span><span class="badge" id="src-status">未加载</span></div>
+  <div class="body nopad"><pre id="editor-code" class="code"></pre></div>
+</section>
+
+<!-- 动作输入条：说一句话 → 执行动作 -->
+<div id="action-bar">
+  <div class="ab-main">
+    <button class="mic" id="mic-btn" title="语音输入（中文）">🎤</button>
+    <input id="action-input" type="text" placeholder="说一句话，比如：非常委屈地揉眼睛 / 我好开心 / 你好挥挥手" />
+    <button class="run" id="action-run">执行 ▶</button>
+  </div>
+  <div class="ab-chips" id="action-chips">
+    <button class="chip" data-intent="happy">😄 开心</button>
+    <button class="chip" data-intent="sad">😢 难过</button>
+    <button class="chip" data-intent="angry">😠 生气</button>
+    <button class="chip" data-intent="surprise">😮 惊讶</button>
+    <button class="chip" data-intent="fear">😨 害怕</button>
+    <button class="chip" data-intent="grieved">🥺 委屈</button>
+    <button class="chip" data-intent="wave">👋 挥手</button>
+    <button class="chip" data-intent="nod">🙂 点头</button>
+    <button class="chip" data-intent="shake">🙅 摇头</button>
+  </div>
+  <div class="ab-status" id="action-status"></div>
+</div>
+
+<!-- 底部提示 -->
+<div id="bottombar">
+  <span><b>左键拖动</b> 旋转视角</span>
+  <span><b>右键拖动</b> 平移视角</span>
+  <span><b>滚轮</b> 缩放视图</span>
+  <span><b>点击模型</b> 控制关节（可拖动）</span>
+  <span><b>拖拽文件</b> 加载机器人模型</span>
+</div>
+
+<div id="drop-overlay" class="hidden"><div>松开以加载模型</div></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

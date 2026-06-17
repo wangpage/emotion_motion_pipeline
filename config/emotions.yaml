@@ -1,0 +1,35 @@
+# 6 核心情绪 + 意图 → 英文动作描述模板（供 Stage 1 意图放大使用）
+# 这是 PRD §3 的表。代码里的 pipeline/intent.py:TEMPLATES 与此一致，改这里时同步那边。
+emotions:
+  happy:
+    zh: 开心
+    description_en: "A person raises both arms outward and nods the head with the upper body leaning slightly forward."
+  sad:
+    zh: 难过
+    description_en: "A person lowers the head, draws both shoulders inward, and shrinks the upper body slightly."
+  angry:
+    zh: 生气
+    description_en: "A person leans the torso forward, presses both arms downward and tense, with the head slightly lowered."
+  surprise:
+    zh: 惊讶
+    description_en: "A person quickly raises the head, opens both arms wide, and leans the upper body backward."
+  fear:
+    zh: 害怕
+    description_en: "A person turns the head aside and pulls back, raising both arms to guard in front of the chest."
+  neutral:
+    zh: 中性/待机
+    description_en: "A person stands still and breathes calmly with tiny idle motions of the head."
+
+intents:
+  grieved:
+    zh: 委屈（揉眼睛）
+    description_en: "A person lowers the head slightly, brings both hands up to the face, and moves the wrists left and right near the eyes."
+  wave:
+    zh: 打招呼（挥手）
+    description_en: "A person raises the right arm and waves the hand side to side to say hello."
+  nod:
+    zh: 点头
+    description_en: "A person nods the head up and down."
+  shake:
+    zh: 摇头
+    description_en: "A person shakes the head left and right to say no."

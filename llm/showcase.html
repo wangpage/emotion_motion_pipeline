@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>情感陪伴 AI · 功能展示</title>
+<style>
+  :root{
+    --bg:#0d1014; --panel:#161b22; --panel-2:#1c232c; --line:#26303c;
+    --txt:#e6edf3; --muted:#8b97a5; --accent:#5b9bff; --accent-2:#a87cff;
+    --radius:16px; --shadow:0 8px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;
+    background:radial-gradient(1200px 600px at 80% -10%,rgba(91,155,255,.12),transparent 60%),
+               radial-gradient(900px 500px at -10% 110%,rgba(168,124,255,.12),transparent 55%),
+               var(--bg);
+    color:var(--txt); min-height:100%; overflow-x:hidden;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:32px 22px 60px}
+
+  /* ── Hero ── */
+  .hero{text-align:center;padding:26px 0 34px}
+  .hero .kicker{display:inline-block;font-size:12px;letter-spacing:3px;color:var(--muted);
+    text-transform:uppercase;border:1px solid var(--line);padding:5px 14px;border-radius:999px;margin-bottom:18px}
+  .hero h1{font-size:40px;font-weight:800;letter-spacing:-.5px;line-height:1.15;
+    background:linear-gradient(120deg,#fff 10%,var(--accent) 60%,var(--accent-2));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p{color:var(--muted);margin-top:14px;font-size:16px;max-width:620px;margin-left:auto;margin-right:auto;line-height:1.6}
+  .caps{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:24px}
+  .cap{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);
+    padding:9px 15px;border-radius:12px;font-size:13.5px;color:#cdd6e0}
+  .cap b{font-size:15px}
+
+  /* ── Section heads ── */
+  .sec-head{display:flex;align-items:baseline;gap:12px;margin:38px 4px 16px}
+  .sec-head .n{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    display:grid;place-items:center;font-size:13px;font-weight:700;color:#fff;flex:0 0 auto}
+  .sec-head h2{font-size:18px;font-weight:700}
+  .sec-head span{color:var(--muted);font-size:13px}
+
+  /* ── Persona gallery ── */
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:14px}
+  .pcard{position:relative;background:var(--panel);border:1.5px solid var(--line);border-radius:var(--radius);
+    padding:18px;cursor:pointer;transition:transform .18s,border-color .18s,box-shadow .18s;overflow:hidden}
+  .pcard:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+  .pcard.active{border-color:transparent;box-shadow:0 0 0 2px var(--cs),var(--shadow)}
+  .pcard .glow{position:absolute;inset:0;opacity:.14;background:linear-gradient(135deg,var(--cs),var(--ce));pointer-events:none}
+  .pcard .top{display:flex;align-items:center;gap:13px;position:relative}
+  .pcard .av{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;font-size:28px;
+    background:linear-gradient(135deg,var(--cs),var(--ce));flex:0 0 auto;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+  .pcard .nm{font-size:17px;font-weight:700}
+  .pcard .al{font-size:12px;color:var(--muted);margin-top:2px}
+  .pcard .tag{position:relative;margin-top:13px;font-size:12.5px;color:#aeb8c4;line-height:1.55;min-height:38px}
+  .pcard .voice{position:relative;margin-top:12px;display:inline-flex;align-items:center;gap:6px;
+    font-size:11.5px;color:var(--muted);background:var(--panel-2);border:1px solid var(--line);padding:4px 9px;border-radius:8px}
+  .pcard .check{position:absolute;top:14px;right:14px;width:22px;height:22px;border-radius:50%;
+    background:linear-gradient(135deg,var(--cs),var(--ce));display:none;place-items:center;font-size:13px;color:#fff}
+  .pcard.active .check{display:grid}
+
+  /* ── Demo / chat ── */
+  .demo{display:grid;grid-template-columns:1fr;gap:0;background:var(--panel);border:1px solid var(--line);
+    border-radius:20px;overflow:hidden;box-shadow:var(--shadow)}
+  .bar{display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line);
+    background:var(--panel-2);flex-wrap:wrap}
+  .bar .who{display:flex;align-items:center;gap:11px;margin-right:auto}
+  .bar .who .av{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-size:21px;
+    background:linear-gradient(135deg,var(--cs,#555),var(--ce,#777));position:relative}
+  .bar .who .nm{font-weight:700;font-size:15px}
+  .bar .who .st{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .dot{width:7px;height:7px;border-radius:50%;background:#3fb950;box-shadow:0 0 8px #3fb950}
+  .ctrl{display:flex;align-items:center;gap:8px}
+  select{background:var(--bg);color:var(--txt);border:1px solid var(--line);border-radius:10px;
+    padding:8px 11px;font-size:13px;font-family:inherit;cursor:pointer;outline:none}
+  select:focus{border-color:var(--accent)}
+  .badge{font-size:11.5px;color:#cdd6e0;background:var(--bg);border:1px solid var(--line);
+    padding:6px 10px;border-radius:8px;white-space:nowrap}
+  .badge.hidden{display:none}
+  .badge.lat{color:#3fb950;border-color:rgba(63,185,80,.4);font-variant-numeric:tabular-nums}
+  .badge.lat.slow{color:#f0a04b;border-color:rgba(240,160,75,.45)}
+  .badge.lat.bad{color:#ff6347;border-color:rgba(255,99,71,.45)}
+
+  .chat{height:440px;overflow-y:auto;padding:22px 20px;display:flex;flex-direction:column;gap:14px}
+  .chat::-webkit-scrollbar{width:8px}.chat::-webkit-scrollbar-thumb{background:#2c3744;border-radius:8px}
+  .empty{margin:auto;text-align:center;color:var(--muted);max-width:340px}
+  .empty .big{font-size:40px;margin-bottom:12px}
+  .row{display:flex;gap:11px;align-items:flex-end;max-width:80%}
+  .row.user{align-self:flex-end;flex-direction:row-reverse}
+  .avw{position:relative;flex:0 0 auto}
+  .mav{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:18px;
+    background:linear-gradient(135deg,var(--cs,#555),var(--ce,#777))}
+  .row.user .mav{background:#2c3744}
+  .emo-badge{position:absolute;bottom:-4px;right:-4px;font-size:14px;background:var(--panel);
+    border-radius:50%;width:20px;height:20px;display:grid;place-items:center;border:1px solid var(--line)}
+  .bubble{padding:11px 15px;border-radius:14px;font-size:14.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+  .row.ai .bubble{background:var(--panel-2);border:1px solid var(--line);border-bottom-left-radius:5px}
+  .row.user .bubble{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-bottom-right-radius:5px}
+  .bubble.streaming::after{content:"▋";color:var(--accent);animation:blink 1s steps(2) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .bubble.asr-prev{opacity:.7;font-style:italic}
+  .e-开心{box-shadow:0 0 0 1.5px rgba(255,215,0,.5)}
+  .e-撒娇{box-shadow:0 0 0 1.5px rgba(255,105,180,.5)}
+  .e-害羞{box-shadow:0 0 0 1.5px rgba(255,182,193,.5)}
+  .e-担心{box-shadow:0 0 0 1.5px rgba(91,155,213,.5)}
+  .e-生气{box-shadow:0 0 0 1.5px rgba(255,99,71,.5)}
+  .notice{align-self:center;font-size:12px;color:var(--accent-2);background:rgba(168,124,255,.1);
+    border:1px solid rgba(168,124,255,.25);padding:6px 14px;border-radius:999px}
+  .typing{display:flex;gap:4px;padding:13px 16px;background:var(--panel-2);border:1px solid var(--line);border-radius:14px;width:fit-content}
+  .typing span{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:bob 1.2s infinite}
+  .typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+  @keyframes bob{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-5px);opacity:1}}
+
+  .composer{display:flex;gap:10px;align-items:center;padding:14px 16px;border-top:1px solid var(--line);background:var(--panel-2)}
+  .composer input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:12px;
+    padding:12px 15px;color:var(--txt);font-size:14.5px;font-family:inherit;outline:none}
+  .composer input:focus{border-color:var(--accent)}
+  .mic,.send{width:46px;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--bg);
+    color:var(--txt);font-size:19px;cursor:pointer;display:grid;place-items:center;transition:.15s;flex:0 0 auto}
+  .mic:hover,.send:hover{border-color:var(--accent)}
+  .mic.rec{background:#ff3b5c;border-color:#ff3b5c;animation:pulse 1.2s infinite}
+  .mic.hf{border-color:var(--accent-2);color:var(--accent-2)}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,59,92,.5)}50%{box-shadow:0 0 0 9px rgba(255,59,92,0)}}
+  .send{background:linear-gradient(135deg,var(--accent),var(--accent-2));border:none;color:#fff}
+  .send:disabled{opacity:.4;cursor:not-allowed}
+
+  .toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(20px);
+    background:#000c;border:1px solid var(--line);padding:11px 20px;border-radius:12px;font-size:13.5px;
+    opacity:0;transition:.25s;pointer-events:none;z-index:50;backdrop-filter:blur(8px)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .hint{text-align:center;color:var(--muted);font-size:12px;margin-top:12px}
+  @media(max-width:560px){.hero h1{font-size:30px}.chat{height:380px}.row{max-width:90%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Hero -->
+  <header class="hero">
+    <span class="kicker">Emotional Companion AI</span>
+    <h1>有人设、有记忆、有情绪的<br>陪伴式 AI 对话</h1>
+    <p>选一张人设卡片，挑一个大模型，用文字或语音和它对话。它会记住你、随对话产生情绪，越聊越懂你。</p>
+    <div class="caps">
+      <div class="cap"><b>🎭</b> 多人设切换</div>
+      <div class="cap"><b>🧠</b> 双轨记忆 + 记忆链</div>
+      <div class="cap"><b>😊</b> 实时情绪标签</div>
+      <div class="cap"><b>🎙️</b> 双流式语音</div>
+      <div class="cap"><b>🔀</b> 7 个大模型可选</div>
+    </div>
+  </header>
+
+  <!-- Step 1: persona -->
+  <div class="sec-head">
+    <div class="n">1</div><h2>选择人设</h2><span>每个角色有独立性格、声音与记忆</span>
+  </div>
+  <div class="gallery" id="gallery"></div>
+
+  <!-- Step 2: chat -->
+  <div class="sec-head">
+    <div class="n">2</div><h2>选择模型 · 开始对话</h2><span>文字直接输入，或点麦克风语音聊天</span>
+  </div>
+  <div class="demo">
+    <div class="bar">
+      <div class="who">
+        <div class="av" id="barAv">🎭</div>
+        <div>
+          <div class="nm" id="barName">请先选择人设</div>
+          <div class="st"><span class="dot"></span><span id="barStatus">在线</span></div>
+        </div>
+      </div>
+      <div class="ctrl">
+        <span class="badge lat hidden" id="latBadge" title="首字/首声 = 你发出后多久开始回应；总 = 整段回复用时"></span>
+        <span class="badge" id="turnBadge">第 0 轮</span>
+        <span class="badge hidden" id="chainBadge"></span>
+        <select id="modelSel" title="选择对话大模型"></select>
+      </div>
+    </div>
+
+    <div class="chat" id="chat">
+      <div class="empty" id="empty">
+        <div class="big">👋</div>
+        <div>选一张上方的人设卡片，<br>然后在下面打个招呼吧～</div>
+      </div>
+    </div>
+
+    <div class="composer">
+      <button class="mic" id="hfBtn" title="切换免提（连续语音）模式">🔁</button>
+      <button class="mic" id="micBtn" title="按住说话 / 免提下点击切换">🎤</button>
+      <input id="input" placeholder="说点什么…" autocomplete="off" disabled>
+      <button class="send" id="sendBtn" disabled>➤</button>
+    </div>
+  </div>
+  <div class="hint">💡 试试连聊几轮再问「你还记得我刚才说的吗」—— 触发记忆整理时会有提示</div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const EMOTION = {
+  开心:{emoji:"😊"}, 撒娇:{emoji:"🥺"}, 害羞:{emoji:"😳"},
+  担心:{emoji:"😟"}, 生气:{emoji:"😤"}, 平静:{emoji:"😌"},
+};
+// 火山 TTS voice id → 友好名称
+const VOICE_NAME = {
+  zh_female_vv_uranus_bigtts:"温柔女声 · VV",
+  zh_male_jieshuonansheng_mars_bigtts:"沉稳男声 · 解说",
+  zh_male_yuanboxiaoshu_moon_bigtts:"清润男声 · 渊博",
+};
+
+let personas=[], models=[], currentPersona=null, currentModel=null;
+const $=id=>document.getElementById(id);
+const chat=$("chat"), input=$("input"), sendBtn=$("sendBtn"), micBtn=$("micBtn"), hfBtn=$("hfBtn");
+
+function toast(msg,ms=2200){const t=$("toast");t.textContent=msg;t.classList.add("show");
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),ms);}
+
+function setThemeVars(el,p){el.style.setProperty("--cs",p.theme_start||"#555");el.style.setProperty("--ce",p.theme_end||"#777");}
+
+/* ── 加载人设 + 模型 ── */
+async function boot(){
+  try{
+    const [rp,rm]=await Promise.all([fetch("/personas"),fetch("/models")]);
+    personas=await rp.json(); models=await rm.json();
+  }catch(e){toast("⚠️ 后端未启动？请先运行 server.py",4000);return;}
+
+  const sel=$("modelSel");
+  sel.innerHTML=models.map(m=>`<option value="${m.id}">${m.label}</option>`).join("");
+  sel.onchange=()=>{currentModel=models.find(m=>m.id===sel.value);};
+  currentModel=models[0];
+
+  const g=$("gallery");
+  g.innerHTML="";
+  personas.forEach(p=>{
+    const c=document.createElement("div");
+    c.className="pcard"; setThemeVars(c,p);
+    const vname=VOICE_NAME[p.tts_voice]||"专属声线";
+    c.innerHTML=`
+      <div class="glow"></div>
+      <div class="check">✓</div>
+      <div class="top">
+        <div class="av">${p.avatar||"👤"}</div>
+        <div><div class="nm">${p.display_name}</div><div class="al">${p.alias||""}</div></div>
+      </div>
+      <div class="tag">${p.tagline||""}</div>
+      <div class="voice">🎙️ ${vname}</div>`;
+    c.onclick=()=>selectPersona(p,c);
+    g.appendChild(c);
+  });
+}
+
+function selectPersona(p,card){
+  if(currentPersona&&currentPersona.id===p.id)return;
+  currentPersona=p;
+  document.querySelectorAll(".pcard").forEach(c=>c.classList.remove("active"));
+  card.classList.add("active");
+  // 重置对话区
+  chat.innerHTML=""; chat.style.setProperty("--cs",p.theme_start);chat.style.setProperty("--ce",p.theme_end);
+  document.documentElement.style.setProperty("--cs",p.theme_start);
+  document.documentElement.style.setProperty("--ce",p.theme_end);
+  $("barAv").textContent=p.avatar; setThemeVars($("barAv"),p);
+  $("barName").textContent=p.display_name;
+  $("turnBadge").textContent="第 0 轮"; $("chainBadge").classList.add("hidden");
+  // 若该人设有偏好模型，自动选上
+  if(p.preferred_model&&models.find(m=>m.id===p.preferred_model)){
+    $("modelSel").value=p.preferred_model; currentModel=models.find(m=>m.id===p.preferred_model);
+  }
+  input.disabled=false; sendBtn.disabled=false; input.placeholder=`和${p.display_name}说点什么…`;
+  input.focus();
+  toast(`已切换到「${p.display_name}」`);
+}
+
+/* ── 气泡渲染 ── */
+function clearEmpty(){const e=$("empty");if(e)e.remove();}
+function addBubble(role,text){
+  clearEmpty();
+  const row=document.createElement("div"); row.className="row "+role;
+  const avw=document.createElement("div"); avw.className="avw";
+  const av=document.createElement("div"); av.className="mav";
+  if(role==="user")av.textContent="🧑"; else{av.textContent=currentPersona.avatar; setThemeVars(av,currentPersona);}
+  avw.appendChild(av);
+  const b=document.createElement("div"); b.className="bubble"; b.textContent=text;
+  row.appendChild(avw); row.appendChild(b); chat.appendChild(row);
+  chat.scrollTop=chat.scrollHeight;
+  return {row,avw,b};
+}
+function showTyping(){clearEmpty();const r=document.createElement("div");r.className="row ai";r.id="typingRow";
+  r.innerHTML=`<div class="avw"><div class="mav">${currentPersona.avatar}</div></div><div class="typing"><span></span><span></span><span></span></div>`;
+  setThemeVars(r.querySelector(".mav"),currentPersona);chat.appendChild(r);chat.scrollTop=chat.scrollHeight;}
+function hideTyping(){const r=$("typingRow");if(r)r.remove();}
+
+function applyEmotion(ref,emotion){
+  const emo=emotion||"平静";
+  ref.b.classList.add("e-"+emo);
+  if(emo!=="平静"&&EMOTION[emo]){
+    const bd=document.createElement("div");bd.className="emo-badge";bd.textContent=EMOTION[emo].emoji;
+    ref.avw.appendChild(bd);
+  }
+}
+function applyMeta(ev){
+  $("turnBadge").textContent=`第 ${ev.turn_count} 轮`;
+  if((ev.chain_length||0)>0){$("chainBadge").textContent=`🧠 ${ev.chain_length} 段记忆`;$("chainBadge").classList.remove("hidden");}
+  if(ev.session_id)localStorage.setItem(`scs_${currentPersona.id}`,ev.session_id);
+  if(ev.memory_updated){
+    const n=document.createElement("div");n.className="notice";
+    n.textContent=ev.profile_updated?"🧠 记忆整理完毕，对你更了解了":"🧠 记忆已整理";
+    chat.appendChild(n);chat.scrollTop=chat.scrollHeight;
+  }
+}
+
+/* ── 延迟显示 ── first=首字/首声(s), total=整段(s) ── */
+function setLat(kind, first, total){
+  const b=$("latBadge"); b.classList.remove("hidden","slow","bad");
+  if(first>=6) b.classList.add("bad"); else if(first>=3) b.classList.add("slow");
+  let t=`⚡ ${kind} ${first.toFixed(2)}s`;
+  if(total!=null) t+=` · 总 ${total.toFixed(2)}s`;
+  b.textContent=t;
+}
+
+/* ── 文字对话（SSE）── */
+let busy=false;
+async function sendText(){
+  if(busy||!currentPersona)return;
+  const msg=input.value.trim(); if(!msg)return;
+  input.value=""; busy=true; sendBtn.disabled=true;
+  addBubble("user",msg); showTyping();
+  const sid=localStorage.getItem(`scs_${currentPersona.id}`)||"";
+  let ref=null, gotFirst=false;
+  const t0=performance.now(); let firstS=null;
+  try{
+    const res=await fetch("/chat",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({session_id:sid,persona_id:currentPersona.id,message:msg,model:currentModel?.id})});
+    const reader=res.body.getReader(); const dec=new TextDecoder(); let buf="";
+    while(true){
+      const {value,done}=await reader.read(); if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      const parts=buf.split("\n\n"); buf=parts.pop();
+      for(const part of parts){
+        const line=part.trim(); if(!line.startsWith("data:"))continue;
+        const payload=line.slice(5).trim();
+        if(payload==="[DONE]")continue;
+        let ev; try{ev=JSON.parse(payload);}catch{continue;}
+        if(ev.type==="chunk"){
+          if(!gotFirst){hideTyping();ref=addBubble("ai","");ref.b.classList.add("streaming");gotFirst=true;
+            firstS=(performance.now()-t0)/1000; setLat("首字",firstS);}
+          ref.b.textContent+=ev.text; chat.scrollTop=chat.scrollHeight;
+        }else if(ev.type==="meta"){
+          if(ref){ref.b.classList.remove("streaming");applyEmotion(ref,ev.emotion);}
+          if(firstS!=null) setLat("首字",firstS,(performance.now()-t0)/1000);
+          applyMeta(ev);
+        }else if(ev.type==="error"){
+          hideTyping(); toast("出错了："+(ev.message||""),3500);
+        }
+      }
+    }
+  }catch(e){hideTyping();toast("请求失败："+(e.message||e),3500);}
+  finally{busy=false;sendBtn.disabled=false;input.focus();}
+}
+sendBtn.onclick=sendText;
+input.addEventListener("keydown",e=>{if(e.key==="Enter")sendText();});
+
+/* ── 语音（复用后端 ws 协议，端口 5001）── */
+const VOICE_WS_URL=`ws://${location.hostname}:5001/ws/voice`;
+function downsampleTo16kPCM(f32,inRate){
+  const ratio=inRate/16000, outLen=Math.floor(f32.length/ratio), out=new Int16Array(outLen);
+  for(let i=0;i<outLen;i++){const idx=i*ratio,lo=Math.floor(idx),hi=Math.min(lo+1,f32.length-1),fr=idx-lo;
+    let s=f32[lo]*(1-fr)+f32[hi]*fr; s=Math.max(-1,Math.min(1,s)); out[i]=s<0?s*0x8000:s*0x7FFF;}
+  return out;
+}
+class Voice{
+  constructor(){this.ws=null;this.mode=null;this.recording=false;
+    this.micCtx=null;this.stream=null;this.proc=null;this.src=null;
+    this.playCtx=null;this.head=0;this.sources=[];this.playing=false;
+    this.aiRef=null;this.partial=null;this.barged=false;this.ttsRate=24000;
+    this.tFinal=0;this.firstAudioPending=false;this.continuous=false;
+    this.hasSpoken=false;this.lastVoice=0;this.turnStart=0;}
+  async connect(){
+    const mode="ptt";   // 统一走 PTT 通道（已修过、最稳），连续对话用前端 VAD 复触发
+    if(this.ws&&this.ws.readyState===1&&this.mode===mode)return;
+    if(this.ws){try{this.ws.close()}catch{}this.ws=null;}
+    await new Promise((res,rej)=>{
+      const ws=new WebSocket(VOICE_WS_URL); ws.binaryType="arraybuffer";
+      ws.onopen=()=>{ws.send(JSON.stringify({type:"start",
+        session_id:localStorage.getItem(`scs_${currentPersona.id}`)||"",
+        persona_id:currentPersona.id,model:currentModel?.id,mode}));
+        this.ws=ws;this.mode=mode;res();};
+      ws.onerror=()=>rej(new Error("语音服务连接失败（端口 5001）"));
+      ws.onclose=()=>{if(this.ws===ws)this.ws=null;};
+      ws.onmessage=e=>this.onMsg(e);
+    });
+  }
+  onMsg(e){
+    if(e.data instanceof ArrayBuffer){
+      if(this.firstAudioPending&&this.tFinal){ setLat("首声",(performance.now()-this.tFinal)/1000); this.firstAudioPending=false; }
+      this.playPCM(e.data);return;
+    }
+    let ev;try{ev=JSON.parse(e.data)}catch{return;}
+    switch(ev.type){
+      case "ready": if(ev.session_id)localStorage.setItem(`scs_${currentPersona.id}`,ev.session_id);break;
+      case "asr_partial": this.showPartial(ev.text);break;
+      case "asr_final": this.clearPartial(); if(ev.text)addBubble("user",ev.text);
+        this.aiRef=null; showTyping();
+        this.tFinal=performance.now(); this.firstAudioPending=true; break;
+      case "llm_chunk":
+        if(!this.aiRef){hideTyping();this.aiRef=addBubble("ai","");this.aiRef.b.classList.add("streaming");}
+        this.aiRef.b.textContent+=ev.text; chat.scrollTop=chat.scrollHeight; break;
+      case "tts_start": this.ttsRate=ev.sample_rate||24000; break;
+      case "stop_audio": this.stopPlayback(); break;
+      case "meta":
+        if(this.aiRef){this.aiRef.b.classList.remove("streaming");applyEmotion(this.aiRef,ev.emotion);}
+        applyMeta(ev); this.aiRef=null;
+        if($("barStatus").textContent==="处理中…")$("barStatus").textContent="在线";
+        maybeRelisten(); break;
+      case "error": toast("语音出错："+(ev.message||""),3000); break;
+    }
+  }
+  showPartial(t){if(!t)return; if(!this.partial){this.partial=addBubble("user","");this.partial.b.classList.add("asr-prev");}
+    this.partial.b.textContent=t; chat.scrollTop=chat.scrollHeight;}
+  clearPartial(){if(this.partial){this.partial.row.remove();this.partial=null;}}
+  playPCM(ab){
+    if(!this.playCtx)this.playCtx=new(window.AudioContext||window.webkitAudioContext)();
+    const i16=new Int16Array(ab); if(!i16.length)return;
+    const f32=new Float32Array(i16.length); for(let i=0;i<i16.length;i++)f32[i]=i16[i]/0x8000;
+    const buf=this.playCtx.createBuffer(1,f32.length,this.ttsRate); buf.copyToChannel(f32,0);
+    const s=this.playCtx.createBufferSource(); s.buffer=buf; s.connect(this.playCtx.destination);
+    const now=this.playCtx.currentTime;
+    // 抖动缓冲：仅在播放头落后于现在（缓冲耗尽/首块）时，垫 JITTER 秒再排，
+    // 重建一段提前量去吸收后续句间空隙；正常播放（head 仍领先）不动它，避免插入碎裂。
+    if(this.head < now) this.head = now + JITTER_S;
+    s.start(this.head); this.head+=buf.duration; this.playing=true; this.sources.push(s);
+    s.onended=()=>{this.sources=this.sources.filter(x=>x!==s);if(!this.sources.length)this.playing=false;};
+  }
+  stopPlayback(){this.sources.forEach(s=>{try{s.stop()}catch{}});this.sources=[];this.head=0;this.playing=false;}
+  async start(){
+    if(this.recording)return;
+    await this.connect();
+    if(!this.playCtx)this.playCtx=new(window.AudioContext||window.webkitAudioContext)();
+    if(this.playCtx.state==="suspended"){try{await this.playCtx.resume()}catch{}}
+    this.stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true}});
+    this.micCtx=new(window.AudioContext||window.webkitAudioContext)();
+    this.src=this.micCtx.createMediaStreamSource(this.stream);
+    this.proc=this.micCtx.createScriptProcessor(4096,1,1);
+    const inRate=this.micCtx.sampleRate; this.barged=false;
+    this.hasSpoken=false; this.lastVoice=Date.now(); this.turnStart=Date.now();
+    this.noiseFloor=0; this.calibN=0; this.thr=VOICE_ON_MIN;   // 自适应阈值状态
+    this.proc.onaudioprocess=e=>{
+      if(!this.recording)return;
+      const d=e.inputBuffer.getChannelData(0);
+      let sum=0;for(let i=0;i<d.length;i++)sum+=d[i]*d[i];
+      const rms=Math.sqrt(sum/d.length), now=Date.now();
+      const pcm=downsampleTo16kPCM(d,inRate);
+      if(this.ws?.readyState===1)this.ws.send(pcm.buffer);   // 音频始终发，ASR 全量识别
+      // ── 前 ~0.4s 校准环境底噪，自适应阈值（不同麦克风增益差很大）──
+      if(this.calibN<CALIB_FRAMES){
+        this.noiseFloor=Math.max(this.noiseFloor,rms); this.calibN++;
+        if(this.calibN===CALIB_FRAMES) this.thr=Math.max(VOICE_ON_MIN, this.noiseFloor*2.2);
+        return;   // 校准期不判停
+      }
+      // 连续模式下若 AI 正在说，用户插话则打断
+      if(this.continuous&&this.playing&&!this.barged&&rms>this.thr*2){this.barged=true;
+        if(this.ws?.readyState===1)this.ws.send(JSON.stringify({type:"barge_in"}));this.stopPlayback();}
+      // VAD：超过自适应阈值算「在说话」；说过话后静音 SILENCE_MS 即自动判停
+      if(rms>this.thr){ this.hasSpoken=true; this.lastVoice=now;
+        if($("barStatus").textContent!=="🎤 在说话…")$("barStatus").textContent="🎤 在说话…"; }
+      if(this.hasSpoken && now-this.lastVoice>SILENCE_MS){ this.finishTurn(); }
+      else if(!this.hasSpoken && now-this.turnStart>NO_SPEECH_MS){ this.finishTurn(true); }
+      else if(now-this.turnStart>MAX_TURN_MS){ this.finishTurn(); }
+    };
+    this.src.connect(this.proc); this.proc.connect(this.micCtx.destination);
+    this.recording=true; micBtn.classList.add("rec"); $("barStatus").textContent="聆听中…说吧";
+  }
+  stop(){
+    if(!this.recording)return; this.recording=false;
+    micBtn.classList.remove("rec"); $("barStatus").textContent="在线";
+    if(this.proc){this.proc.disconnect();this.proc.onaudioprocess=null;this.proc=null;}
+    if(this.src){this.src.disconnect();this.src=null;}
+    if(this.stream){this.stream.getTracks().forEach(t=>t.stop());this.stream=null;}
+    if(this.micCtx){this.micCtx.close();this.micCtx=null;}
+  }
+  /* 结束这一轮：停录 + 通知服务端定稿。empty=true 表示没听到说话，不计延迟。*/
+  finishTurn(empty=false){
+    if(!this.recording)return;
+    this.stop();
+    $("barStatus").textContent = empty ? "没听清，再点麦克风说一次" : "处理中…";
+    if(this.ws?.readyState===1)this.ws.send(JSON.stringify({type:"stop"}));
+  }
+}
+// ── VAD 参数（前端静音判停，阈值按麦克风底噪自适应）──
+const VOICE_ON_MIN=0.010;  // 自适应阈值下限（底噪*2.2 与它取大）
+const CALIB_FRAMES=5;      // 开头几帧(~0.4s)用来量底噪
+const SILENCE_MS=1400;     // 说过话后静音多久自动判停（留点停顿余量）
+const NO_SPEECH_MS=8000;   // 一直没说话则自动取消（放宽，别太快放弃）
+const MAX_TURN_MS=25000;   // 单轮硬上限
+const JITTER_S=0.35;       // TTS 播放抖动缓冲：耗尽时重建的提前量，吸收句间空隙
+
+const voice=new Voice();
+async function micGuard(fn){
+  if(!currentPersona){toast("请先选择人设");return;}
+  try{await fn();}catch(e){toast("麦克风/语音连接失败："+(e.message||e),3500);voice.stop();}
+}
+// 🎤 点一下开始说话，停顿即自动发送；说话中再点 = 立刻结束
+micBtn.title="点一下开始说话，停顿自动发送";
+micBtn.addEventListener("click",()=>{
+  if(voice.recording) voice.finishTurn();
+  else micGuard(()=>voice.start());
+});
+// 🔁 连续对话：AI 回复完自动接着听
+hfBtn.title="连续对话：回复后自动继续听你说";
+hfBtn.onclick=()=>{
+  voice.continuous=!voice.continuous;
+  hfBtn.classList.toggle("hf",voice.continuous);
+  toast(voice.continuous?"连续对话已开：回复后自动接着听":"已关闭连续对话");
+  if(!voice.continuous&&voice.recording)voice.finishTurn();
+};
+// 供 onMsg 在一轮回复结束(meta)后调用：连续模式则自动开下一轮
+function maybeRelisten(){
+  if(voice.continuous&&!voice.recording&&currentPersona){
+    setTimeout(()=>{ if(voice.continuous&&!voice.recording) micGuard(()=>voice.start()); }, 400);
+  }
+}
+
+boot();
+</script>
+</body>
+</html>

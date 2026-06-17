@@ -1,0 +1,26 @@
+# ── 密钥与接入配置（示例模板）──────────────────────────────────
+# 用法：复制本文件为 config.yaml，填入你自己的密钥。
+#   cp config.example.yaml config.yaml
+# config.yaml 已被 .gitignore 忽略，不会提交。
+# 每一项都可用同名大写环境变量覆盖（见括号），便于线上注入。
+
+# LLM（DMXAPI，OpenAI 兼容）—— 多模型聚合，延迟较高
+llm:
+  base_url: "https://www.dmxapi.cn/v1"        # 环境变量 LLM_BASE_URL
+  api_key:  "sk-YOUR_LLM_API_KEY_HERE"        # LLM_API_KEY
+
+# DeepSeek 官方直连（OpenAI 兼容）—— deepseek-v4-* 走这里，首 token ~5s，明显更快
+deepseek:
+  base_url: "https://api.deepseek.com/v1"     # DEEPSEEK_BASE_URL
+  api_key:  "sk-YOUR_DEEPSEEK_API_KEY_HERE"   # DEEPSEEK_API_KEY
+
+# 火山引擎语音（豆包流式语音识别 2.0 + seed-tts-2.0）
+volcengine:
+  app_id:       "YOUR_VOLC_APP_ID"            # VOLC_APP_ID
+  access_token: "YOUR_VOLC_ACCESS_TOKEN"      # VOLC_ACCESS_TOKEN
+  secret_key:   "YOUR_VOLC_SECRET_KEY"        # VOLC_SECRET_KEY（当前 ASR/TTS 鉴权未用到，留存备用）
+  # 资源 ID / 端点：账号开通的是「豆包流式语音识别模型 2.0」(seedasr)
+  asr_resource_id: "volc.seedasr.sauc.duration"       # 并发版换 volc.seedasr.sauc.concurrent
+  asr_url:         "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async"
+  tts_resource_id: "seed-tts-2.0"
+  tts_url:         "wss://openspeech.bytedance.com/api/v3/tts/bidirection"

@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 对话</title>
+  <style>
+    :root { --t0:#ff6b9d; --t1:#ff4081; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family:-apple-system,"PingFang SC","Hiragino Sans GB",sans-serif;
+      background:linear-gradient(135deg,#f8d7e3 0%,#f0b8cc 40%,#e89ab8 100%);
+      min-height:100vh; display:flex; align-items:center; justify-content:center;
+    }
+
+    /* ── 手机壳 ── */
+    .phone {
+      width:390px; height:844px; background:#fff;
+      border-radius:48px;
+      box-shadow:0 40px 100px rgba(0,0,0,.25),0 0 0 1px rgba(0,0,0,.08);
+      overflow:hidden; display:flex; flex-direction:column; position:relative;
+    }
+
+    /* ── Header ── */
+    .header {
+      background:linear-gradient(135deg,var(--t0),var(--t1));
+      padding:52px 20px 14px;
+      display:flex; align-items:center; gap:12px; flex-shrink:0;
+      box-shadow:0 2px 12px rgba(0,0,0,.2);
+      transition:background .5s;
+    }
+    .h-avatar {
+      width:44px; height:44px; border-radius:50%;
+      background:rgba(255,255,255,.2);
+      display:flex; align-items:center; justify-content:center;
+      font-size:24px; flex-shrink:0;
+      box-shadow:0 2px 8px rgba(0,0,0,.15);
+    }
+    .h-info { flex:1; min-width:0; }
+    .h-name  { color:#fff; font-size:17px; font-weight:600; }
+    .h-status{
+      color:rgba(255,255,255,.8); font-size:12px; margin-top:2px;
+      display:flex; align-items:center; gap:4px;
+    }
+    .status-dot{
+      width:7px; height:7px; background:#6aff6e; border-radius:50%;
+      flex-shrink:0; animation:pulse 2s infinite;
+    }
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+    .h-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+    .turn-badge{
+      font-size:11px;color:rgba(255,255,255,.75);
+      background:rgba(255,255,255,.18);border-radius:8px;padding:2px 8px;
+    }
+    /* 记忆链 & 档案按钮 */
+    .h-badges{display:flex;gap:5px;align-items:center;}
+    .chain-badge{
+      font-size:10px;color:rgba(255,255,255,.8);
+      background:rgba(255,255,255,.2);border-radius:6px;padding:2px 6px;
+      cursor:pointer; transition:background .2s;
+    }
+    .chain-badge:hover{background:rgba(255,255,255,.35);}
+    .chain-badge.hidden{display:none;}
+    .switch-btn{
+      font-size:11px;color:#fff;cursor:pointer;
+      background:rgba(255,255,255,.22);border:none;border-radius:8px;
+      padding:3px 8px;font-family:inherit;transition:background .2s;
+    }
+    .switch-btn:hover{background:rgba(255,255,255,.35);}
+
+    /* ── 聊天区 ── */
+    .chat-area{
+      flex:1;overflow-y:auto;padding:16px 16px 8px;
+      display:flex;flex-direction:column;gap:12px;
+      background:#f7f7f7;scroll-behavior:smooth;
+    }
+    .chat-area::-webkit-scrollbar{width:0;}
+    .date-divider{text-align:center;font-size:11px;color:#bbb;margin:4px 0;}
+
+    /* ── 消息气泡 ── */
+    .msg-row{display:flex;gap:10px;align-items:flex-end;animation:fadeUp .3s ease;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .msg-row.user{flex-direction:row-reverse;}
+
+    /* avatar 包裹层，用于放情绪徽章 */
+    .av-wrap{position:relative;flex-shrink:0;}
+    .msg-avatar{
+      width:36px;height:36px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-size:18px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.1);
+    }
+    /* 情绪徽章 */
+    .emotion-badge{
+      position:absolute;bottom:-3px;right:-3px;
+      width:17px;height:17px;border-radius:50%;
+      background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.18);
+      display:flex;align-items:center;justify-content:center;
+      font-size:10px;
+      animation:badgePop .3s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes badgePop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+
+    .bubble{
+      max-width:62%;padding:10px 14px;border-radius:18px;
+      font-size:15px;line-height:1.55;word-break:break-word;
+      transition:border-left-color .3s;
+    }
+    .msg-row.ai .bubble{
+      background:#fff;color:#222;border-bottom-left-radius:4px;
+      box-shadow:0 1px 6px rgba(0,0,0,.08);
+      border-left:3px solid transparent;
+    }
+    .msg-row.user .bubble{
+      background:linear-gradient(135deg,var(--t0),var(--t1));color:#fff;
+      border-bottom-right-radius:4px;
+      box-shadow:0 2px 8px rgba(0,0,0,.2);
+    }
+
+    /* 流式输出光标 */
+    .bubble.streaming::after {
+      content:"▋"; display:inline-block;
+      animation:cur .7s infinite; color:#bbb; font-size:.85em; margin-left:2px;
+    }
+    @keyframes cur{0%,100%{opacity:1}50%{opacity:0}}
+
+    /* 情绪对应气泡左边框色 */
+    .e-开心  { border-left-color:#FFD700 !important; }
+    .e-撒娇  { border-left-color:#FF69B4 !important; }
+    .e-害羞  { border-left-color:#FFB6C1 !important; }
+    .e-担心  { border-left-color:#5B9BD5 !important; }
+    .e-生气  { border-left-color:#FF6347 !important; }
+    .e-平静  { border-left-color:transparent !important; }
+
+    /* 记忆整理系统消息 */
+    .memory-notice{
+      text-align:center;font-size:11px;color:#aaa;
+      display:flex;align-items:center;justify-content:center;gap:6px;
+      animation:fadeUp .4s ease;
+    }
+    .memory-notice::before,.memory-notice::after{
+      content:"";flex:1;height:1px;background:#e8e8e8;
+    }
+
+    /* 打字指示器 */
+    .typing-row{display:flex;gap:10px;align-items:flex-end;}
+    .typing-bubble{
+      background:#fff;border-radius:18px;border-bottom-left-radius:4px;
+      padding:12px 16px;box-shadow:0 1px 6px rgba(0,0,0,.08);
+      display:flex;gap:5px;align-items:center;
+    }
+    .typing-dot{
+      width:7px;height:7px;background:#ccc;border-radius:50%;
+      animation:tdot 1.2s infinite ease-in-out;
+    }
+    .typing-dot:nth-child(2){animation-delay:.2s}
+    .typing-dot:nth-child(3){animation-delay:.4s}
+    @keyframes tdot{0%,80%,100%{transform:scale(1);opacity:.6}40%{transform:scale(1.3);opacity:1}}
+
+    /* Toast */
+    .toast{
+      position:absolute;bottom:100px;left:50%;
+      transform:translateX(-50%) translateY(10px);
+      background:rgba(30,30,30,.8);color:#fff;
+      padding:7px 18px;border-radius:20px;font-size:13px;
+      opacity:0;pointer-events:none;
+      transition:opacity .3s,transform .3s;
+      white-space:nowrap;z-index:20;
+    }
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+    /* ── 输入区 ── */
+    .input-area{
+      padding:12px 16px 32px;background:#fff;
+      border-top:1px solid #efefef;
+      display:flex;gap:10px;align-items:flex-end;flex-shrink:0;
+    }
+    .input-box{
+      flex:1;min-height:40px;max-height:120px;
+      border:1.5px solid #e8e8e8;border-radius:20px;
+      padding:9px 16px;font-size:15px;font-family:inherit;
+      resize:none;outline:none;background:#f9f9f9;color:#222;
+      transition:border-color .2s;
+    }
+    .input-box:focus{border-color:var(--t0);background:#fff;}
+    .input-box::placeholder{color:#ccc;}
+    .send-btn{
+      width:40px;height:40px;border-radius:50%;
+      background:linear-gradient(135deg,var(--t0),var(--t1));
+      border:none;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;flex-shrink:0;
+      box-shadow:0 2px 8px rgba(0,0,0,.2);
+      transition:transform .15s,background .5s;
+    }
+    .send-btn:hover{transform:scale(1.08);}
+    .send-btn:active{transform:scale(.95);}
+    .send-btn:disabled{opacity:.4;cursor:default;transform:none;}
+    .send-btn svg{width:18px;height:18px;fill:#fff;}
+
+    /* ── 语音：麦克风 + 免提 ── */
+    .mic-btn{
+      width:40px;height:40px;border-radius:50%;flex-shrink:0;
+      border:1.5px solid #e8e8e8;background:#f9f9f9;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;font-size:18px;
+      transition:transform .15s,background .2s,box-shadow .2s;user-select:none;
+    }
+    .mic-btn:hover{background:#f0f0f0;}
+    .mic-btn:active{transform:scale(.95);}
+    .mic-btn.recording{
+      background:linear-gradient(135deg,var(--t0),var(--t1));border-color:transparent;
+      box-shadow:0 0 0 0 rgba(255,64,129,.5);animation:micPulse 1.2s infinite;
+    }
+    @keyframes micPulse{
+      0%{box-shadow:0 0 0 0 rgba(255,64,129,.45);}
+      70%{box-shadow:0 0 0 12px rgba(255,64,129,0);}
+      100%{box-shadow:0 0 0 0 rgba(255,64,129,0);}
+    }
+    .hf-toggle{
+      flex-shrink:0;border:1.5px solid #e8e8e8;background:#f9f9f9;color:#888;
+      border-radius:14px;padding:0 9px;height:28px;align-self:center;
+      font-size:11px;font-family:inherit;cursor:pointer;transition:all .2s;
+    }
+    .hf-toggle.active{
+      background:linear-gradient(135deg,var(--t0),var(--t1));color:#fff;border-color:transparent;
+    }
+    /* 用户语音实时预览气泡 */
+    .bubble.asr-preview{opacity:.6;font-style:italic;}
+
+    /* ══ 人设选择器 ══ */
+    .picker{
+      position:absolute;inset:0;
+      background:rgba(246,246,250,.97);backdrop-filter:blur(10px);
+      display:flex;flex-direction:column;z-index:100;
+      animation:overlayIn .3s ease;
+    }
+    .picker.hidden{display:none;}
+    @keyframes overlayIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+    .picker-head{padding:56px 24px 16px;background:linear-gradient(160deg,#f0f4ff,#fff);}
+    .picker-title{font-size:22px;font-weight:700;color:#1a1a2e;}
+    .picker-sub  {font-size:13px;color:#999;margin-top:4px;}
+    .picker-grid{
+      flex:1;overflow-y:auto;padding:8px 16px 24px;
+      display:grid;grid-template-columns:1fr 1fr;gap:12px;
+    }
+    .picker-grid::-webkit-scrollbar{width:0;}
+    .persona-card{
+      border-radius:20px;overflow:hidden;cursor:pointer;position:relative;
+      box-shadow:0 4px 16px rgba(0,0,0,.1);min-height:148px;
+      transition:transform .2s,box-shadow .2s;
+    }
+    .persona-card:hover {transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.18);}
+    .persona-card:active{transform:scale(.97);}
+    .card-bg{position:absolute;inset:0;opacity:.9;}
+    .card-content{position:relative;padding:16px 14px;display:flex;flex-direction:column;height:100%;}
+    .card-avatar{font-size:30px;margin-bottom:8px;}
+    .card-name  {font-size:16px;font-weight:700;color:#fff;}
+    .card-alias {font-size:11px;color:rgba(255,255,255,.7);margin-top:1px;}
+    .card-tag   {font-size:10px;color:rgba(255,255,255,.85);margin-top:auto;padding-top:8px;line-height:1.45;}
+    .picker-close{
+      text-align:center;padding:14px;font-size:13px;color:#aaa;cursor:pointer;
+    }
+    .picker-close:hover{color:#555;}
+
+    /* ══ 记忆链抽屉 ══ */
+    .chain-drawer{
+      position:absolute;inset:0;
+      background:rgba(246,246,250,.97);backdrop-filter:blur(10px);
+      display:flex;flex-direction:column;z-index:90;
+      animation:overlayIn .25s ease;
+    }
+    .chain-drawer.hidden{display:none;}
+    .drawer-head{
+      padding:52px 20px 16px;
+      background:linear-gradient(135deg,var(--t0),var(--t1));
+      display:flex;align-items:center;gap:10px;
+    }
+    .drawer-head-title{color:#fff;font-size:17px;font-weight:600;}
+    .drawer-close-btn{
+      margin-left:auto;font-size:13px;color:rgba(255,255,255,.85);
+      background:rgba(255,255,255,.2);border:none;border-radius:8px;
+      padding:4px 10px;cursor:pointer;font-family:inherit;
+    }
+    .drawer-body{flex:1;overflow-y:auto;padding:16px;}
+    .drawer-section{margin-bottom:20px;}
+    .drawer-section-title{
+      font-size:12px;color:#aaa;font-weight:600;letter-spacing:.5px;
+      text-transform:uppercase;margin-bottom:8px;
+    }
+    .drawer-card{
+      background:#fff;border-radius:14px;padding:14px 16px;
+      box-shadow:0 1px 6px rgba(0,0,0,.07);margin-bottom:8px;
+      font-size:14px;line-height:1.6;color:#333;
+      white-space:pre-wrap;
+    }
+    .chain-item{
+      background:#fff;border-radius:14px;padding:12px 16px;
+      box-shadow:0 1px 6px rgba(0,0,0,.07);margin-bottom:8px;
+    }
+    .chain-label{font-size:11px;color:#aaa;margin-bottom:4px;}
+    .chain-brief{font-size:14px;color:#333;line-height:1.5;}
+
+    /* ── 模型栏 ── */
+    .model-bar{
+      background:#f9f9f9;border-bottom:1px solid #efefef;
+      padding:7px 16px;display:flex;align-items:center;gap:8px;
+      flex-shrink:0;cursor:pointer;transition:background .15s;
+    }
+    .model-bar:hover{background:#f0f0f0;}
+    .model-bar-dot{width:6px;height:6px;border-radius:50%;background:var(--t0);flex-shrink:0;}
+    .model-bar-name{font-size:12px;color:#555;font-weight:500;flex:1;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .model-bar-hint{font-size:11px;color:#bbb;}
+
+    /* ── 模型选择器 ── */
+    .model-picker{
+      position:absolute;inset:0;
+      background:rgba(246,246,250,.97);backdrop-filter:blur(10px);
+      display:flex;flex-direction:column;z-index:110;
+      animation:overlayIn .25s ease;
+    }
+    .model-picker.hidden{display:none;}
+    .model-picker-head{padding:56px 24px 16px;background:linear-gradient(160deg,#f0f4ff,#fff);}
+    .model-picker-title{font-size:22px;font-weight:700;color:#1a1a2e;}
+    .model-picker-sub{font-size:13px;color:#999;margin-top:4px;}
+    .model-list{flex:1;overflow-y:auto;padding:12px 16px 8px;}
+    .model-list::-webkit-scrollbar{width:0;}
+    .model-item{
+      background:#fff;border-radius:14px;padding:13px 16px;margin-bottom:10px;
+      cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.06);
+      display:flex;align-items:center;gap:12px;
+      transition:transform .15s,box-shadow .15s;
+      border:2px solid transparent;
+    }
+    .model-item:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.1);}
+    .model-item:active{transform:scale(.98);}
+    .model-item.active{border-color:var(--t0);background:#fff8fb;}
+    .model-icon{font-size:22px;flex-shrink:0;}
+    .model-info{flex:1;min-width:0;}
+    .model-name{font-size:15px;font-weight:600;color:#1a1a2e;}
+    .model-id-text{font-size:11px;color:#bbb;margin-top:2px;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .model-check{color:var(--t0);font-size:18px;flex-shrink:0;}
+    .model-picker-close{
+      text-align:center;padding:14px 16px 28px;font-size:13px;color:#aaa;cursor:pointer;
+    }
+    .model-picker-close:hover{color:#555;}
+
+    @media(max-width:430px){
+      body{background:#f0e6ee;align-items:flex-start;}
+      .phone{width:100vw;height:100vh;border-radius:0;box-shadow:none;}
+    }
+  </style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- Header -->
+  <div class="header" id="header">
+    <div class="h-avatar" id="hAvatar">🌸</div>
+    <div class="h-info">
+      <div class="h-name"   id="hName">—</div>
+      <div class="h-status">
+        <span class="status-dot"></span>
+        <span id="statusText">在线</span>
+      </div>
+    </div>
+    <div class="h-right">
+      <div class="turn-badge" id="turnBadge">第 0 轮</div>
+      <div class="h-badges">
+        <div class="chain-badge hidden" id="chainBadge" onclick="openDrawer()">🧠 0段记忆</div>
+        <button class="switch-btn" onclick="openPicker()">切换人设</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模型栏 -->
+  <div class="model-bar" id="modelBar" onclick="openModelPicker()">
+    <div class="model-bar-dot"></div>
+    <div class="model-bar-name" id="modelBarName">加载中...</div>
+    <div class="model-bar-hint">切换模型 ›</div>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-area" id="chatArea">
+    <div class="date-divider">今天</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Input -->
+  <div class="input-area">
+    <button class="hf-toggle" id="hfToggle" title="免提连续对话">免提</button>
+    <button class="mic-btn" id="micBtn" title="按住说话">🎤</button>
+    <textarea id="inputBox" class="input-box" placeholder="发消息…" rows="1"></textarea>
+    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+
+  <!-- 人设选择器 -->
+  <div class="picker hidden" id="picker">
+    <div class="picker-head">
+      <div class="picker-title">选择 AI 伴侣</div>
+      <div class="picker-sub">每个人设独立维护对话记忆与用户档案</div>
+    </div>
+    <div class="picker-grid" id="pickerGrid"></div>
+    <div class="picker-close hidden" id="pickerClose" onclick="closePicker()">✕ 取消</div>
+  </div>
+
+  <!-- 模型选择器 -->
+  <div class="model-picker hidden" id="modelPicker">
+    <div class="model-picker-head">
+      <div class="model-picker-title">选择模型</div>
+      <div class="model-picker-sub">切换后下一条消息立即生效，对话历史保留</div>
+    </div>
+    <div class="model-list" id="modelList"></div>
+    <div class="model-picker-close" onclick="closeModelPicker()">✕ 取消</div>
+  </div>
+
+  <!-- 记忆链抽屉 -->
+  <div class="chain-drawer hidden" id="chainDrawer">
+    <div class="drawer-head">
+      <div class="drawer-head-title">🧠 记忆与档案</div>
+      <button class="drawer-close-btn" onclick="closeDrawer()">关闭</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+  </div>
+
+</div>
+
+<script>
+/* ── 情绪配置 ── */
+const EMOTION = {
+  开心: { emoji:"😊", color:"#FFD700" },
+  撒娇: { emoji:"🥺", color:"#FF69B4" },
+  害羞: { emoji:"😳", color:"#FFB6C1" },
+  担心: { emoji:"😟", color:"#5B9BD5" },
+  生气: { emoji:"😤", color:"#FF6347" },
+  平静: { emoji:"😌", color:null },
+};
+
+/* ── 机器人联动：把 AI 情绪推给机器人查看器 (/robot/) ── */
+const robotBus = (() => { try { return new BroadcastChannel('aiyizhizai-emotion'); } catch { return null; } })();
+let robotWin = null;
+function openRobot() {
+  robotWin = window.open('/robot/', 'aiyizhizai_robot', 'width=900,height=720');
+}
+function notifyRobot(emotion) {
+  if (!emotion) return;
+  try { robotBus && robotBus.postMessage({ emotion }); } catch (e) {}
+  try { if (robotWin && !robotWin.closed) robotWin.postMessage({ type: 'emotion', emotion }, '*'); } catch (e) {}
+}
+window.addEventListener('DOMContentLoaded', () => {
+  const b = document.createElement('button');
+  b.textContent = '🤖 机器人';
+  b.title = '打开机器人查看器，AI 情绪会驱动它做动作';
+  b.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:9999;border:none;cursor:pointer;' +
+    'background:#2f7bff;color:#fff;padding:10px 16px;border-radius:22px;font-size:14px;box-shadow:0 6px 20px #2f7bff66';
+  b.onclick = openRobot;
+  document.body.appendChild(b);
+});
+
+/* ── 状态 ── */
+let currentPersona = null;
+let allPersonas    = [];
+let allModels      = [];
+let currentModel   = null;
+
+const chatArea      = document.getElementById("chatArea");
+const inputBox      = document.getElementById("inputBox");
+const sendBtn       = document.getElementById("sendBtn");
+const turnBadge     = document.getElementById("turnBadge");
+const statusText    = document.getElementById("statusText");
+const toastEl       = document.getElementById("toast");
+const chainBadge    = document.getElementById("chainBadge");
+const modelBarName  = document.getElementById("modelBarName");
+
+const MODEL_ICONS = {
+  "DeepSeek":  "🐋", "MiniMax": "✨", "glm": "🧠",
+  "doubao":    "🎯", "kimi":    "🌙", "gemini": "💎",
+  "gpt":       "⚡", "claude":  "🔮",
+};
+
+function getModelIcon(id) {
+  const key = Object.keys(MODEL_ICONS).find(k => id.toLowerCase().startsWith(k.toLowerCase()));
+  return key ? MODEL_ICONS[key] : "🤖";
+}
+
+/* ── 初始化 ── */
+async function init() {
+  const [rp, rm] = await Promise.all([fetch("/personas"), fetch("/models")]);
+  allPersonas = await rp.json();
+  allModels   = await rm.json();
+  buildPickerGrid();
+  buildModelList();
+
+  // 恢复上次选的模型
+  const savedModelId = localStorage.getItem("model_id");
+  const savedModel   = savedModelId && allModels.find(m => m.id === savedModelId);
+  selectModel(savedModel || allModels[0], false);
+
+  const savedId = localStorage.getItem("persona_id");
+  const saved   = savedId && allPersonas.find(p => p.id === savedId);
+  if (saved) {
+    selectPersona(saved, false);
+  } else {
+    document.getElementById("picker").classList.remove("hidden");
+  }
+}
+
+/* ── 模型选择器 ── */
+function buildModelList() {
+  const list = document.getElementById("modelList");
+  list.innerHTML = "";
+  allModels.forEach(m => {
+    const item = document.createElement("div");
+    item.className = "model-item" + (currentModel?.id === m.id ? " active" : "");
+    item.id = "model-item-" + m.id.replace(/[^a-z0-9]/gi, "_");
+    item.innerHTML = `
+      <div class="model-icon">${getModelIcon(m.id)}</div>
+      <div class="model-info">
+        <div class="model-name">${m.label}</div>
+        <div class="model-id-text">${m.id}</div>
+      </div>
+      ${currentModel?.id === m.id ? '<div class="model-check">✓</div>' : ''}`;
+    item.onclick = () => selectModel(m, true);
+    list.appendChild(item);
+  });
+}
+
+function openModelPicker() {
+  buildModelList();
+  document.getElementById("modelPicker").classList.remove("hidden");
+}
+function closeModelPicker() {
+  document.getElementById("modelPicker").classList.add("hidden");
+}
+
+function selectModel(m, close) {
+  currentModel = m;
+  localStorage.setItem("model_id", m.id);
+  modelBarName.textContent = `${getModelIcon(m.id)} ${m.label}`;
+  if (close) {
+    closeModelPicker();
+    showToast(`已切换到 ${m.label}`);
+  }
+}
+
+/* ── 人设选择器 ── */
+function buildPickerGrid() {
+  const grid = document.getElementById("pickerGrid");
+  grid.innerHTML = "";
+  allPersonas.forEach(p => {
+    const card = document.createElement("div");
+    card.className = "persona-card";
+    card.innerHTML = `
+      <div class="card-bg" style="background:linear-gradient(145deg,${p.theme_start},${p.theme_end})"></div>
+      <div class="card-content">
+        <div class="card-avatar">${p.avatar}</div>
+        <div class="card-name">${p.display_name}</div>
+        <div class="card-alias">${p.alias || ""}</div>
+        <div class="card-tag">${p.tagline}</div>
+      </div>`;
+    card.onclick = () => selectPersona(p, true);
+    grid.appendChild(card);
+  });
+}
+
+function openPicker() {
+  document.getElementById("pickerClose").classList.remove("hidden");
+  document.getElementById("picker").classList.remove("hidden");
+}
+function closePicker() {
+  document.getElementById("picker").classList.add("hidden");
+}
+
+const WELCOMES = {
+  suyan:      "babe，来了。我今天刚送走最后一位来访者，正好有空陪你——今天过得怎么样？",
+  luyunshen:  "你来了啊。（侧过头假装没在等你）",
+  jilingyu:   "哇！你来了！我刚刚还在刷番，你今天怎么样？",
+  stella:     "OMG you're here! 今天过得咋样？🐾",
+};
+
+function selectPersona(p, clearChat) {
+  currentPersona = p;
+  localStorage.setItem("persona_id", p.id);
+
+  document.documentElement.style.setProperty("--t0", p.theme_start);
+  document.documentElement.style.setProperty("--t1", p.theme_end);
+
+  document.getElementById("hAvatar").textContent = p.avatar;
+  document.getElementById("hName").textContent   = p.display_name;
+  statusText.textContent = "在线";
+  turnBadge.textContent  = "第 0 轮";
+  chainBadge.classList.add("hidden");
+
+  // 切换到人设绑定的模型（如果存在）
+  if (p.preferred_model) {
+    const preferred = allModels.find(m => m.id === p.preferred_model);
+    if (preferred && preferred.id !== currentModel?.id) {
+      selectModel(preferred, false);
+    }
+  }
+
+  if (clearChat) {
+    chatArea.innerHTML = '<div class="date-divider">今天</div>';
+  }
+  closePicker();
+
+  setTimeout(() => {
+    appendBubble("ai", WELCOMES[p.id] || "你好～", "平静");
+  }, 200);
+}
+
+/* ── 记忆链抽屉 ── */
+async function openDrawer() {
+  if (!currentPersona) return;
+  const sid = localStorage.getItem(`sess_${currentPersona.id}`) || "";
+  const r   = await fetch(`/profile?session_id=${sid}&persona_id=${currentPersona.id}`);
+  const data = await r.json();
+
+  const body = document.getElementById("drawerBody");
+  body.innerHTML = "";
+
+  // 用户档案
+  const sec1 = document.createElement("div");
+  sec1.className = "drawer-section";
+  sec1.innerHTML = `<div class="drawer-section-title">对方档案</div>`;
+  const card1 = document.createElement("div");
+  card1.className = "drawer-card";
+  card1.textContent = data.profile || "还没有足够的对话来建立档案～";
+  sec1.appendChild(card1);
+  body.appendChild(sec1);
+
+  // 近期摘要
+  const sec2 = document.createElement("div");
+  sec2.className = "drawer-section";
+  sec2.innerHTML = `<div class="drawer-section-title">近期对话摘要</div>`;
+  const card2 = document.createElement("div");
+  card2.className = "drawer-card";
+  card2.textContent = data.summary || "暂无摘要";
+  sec2.appendChild(card2);
+  body.appendChild(sec2);
+
+  // 历史记忆链
+  if (data.chain && data.chain.length > 0) {
+    const sec3 = document.createElement("div");
+    sec3.className = "drawer-section";
+    sec3.innerHTML = `<div class="drawer-section-title">历史记忆（${data.chain.length} 段）</div>`;
+    [...data.chain].reverse().forEach(f => {
+      const item = document.createElement("div");
+      item.className = "chain-item";
+      item.innerHTML = `<div class="chain-label">${f.label}</div><div class="chain-brief">${f.brief}</div>`;
+      sec3.appendChild(item);
+    });
+    body.appendChild(sec3);
+  }
+
+  document.getElementById("chainDrawer").classList.remove("hidden");
+}
+function closeDrawer() {
+  document.getElementById("chainDrawer").classList.add("hidden");
+}
+
+/* ── 工具函数 ── */
+function showToast(msg, ms = 2500) {
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  setTimeout(() => toastEl.classList.remove("show"), ms);
+}
+
+function appendBubble(role, text, emotion = "平静") {
+  const row = document.createElement("div");
+  row.className = "msg-row " + role;
+
+  // avatar 包裹
+  const wrap = document.createElement("div");
+  wrap.className = "av-wrap";
+  const av = document.createElement("div");
+  av.className = "msg-avatar";
+  av.textContent = role === "ai" ? (currentPersona?.avatar || "🤖") : "🧑";
+  wrap.appendChild(av);
+
+  // 情绪徽章（仅 AI 气泡）
+  if (role === "ai" && emotion && emotion !== "平静") {
+    const cfg = EMOTION[emotion];
+    if (cfg) {
+      const badge = document.createElement("div");
+      badge.className = "emotion-badge";
+      badge.textContent = cfg.emoji;
+      wrap.appendChild(badge);
+    }
+  }
+
+  const bubble = document.createElement("div");
+  bubble.className = "bubble" + (role === "ai" ? ` e-${emotion}` : "");
+  bubble.textContent = text;
+
+  row.appendChild(wrap);
+  row.appendChild(bubble);
+  chatArea.appendChild(row);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function appendMemoryNotice(profileUpdated) {
+  const el = document.createElement("div");
+  el.className = "memory-notice";
+  el.textContent = profileUpdated ? "✨ 记忆已整理 · 档案已更新" : "✨ 记忆已整理";
+  chatArea.appendChild(el);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function showTyping() {
+  const row = document.createElement("div");
+  row.className = "typing-row"; row.id = "typingIndicator";
+  const wrap = document.createElement("div"); wrap.className = "av-wrap";
+  const av   = document.createElement("div"); av.className = "msg-avatar";
+  av.textContent = currentPersona?.avatar || "🤖";
+  wrap.appendChild(av);
+  const bubble = document.createElement("div"); bubble.className = "typing-bubble";
+  bubble.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+  row.appendChild(wrap); row.appendChild(bubble);
+  chatArea.appendChild(row);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+function hideTyping() { document.getElementById("typingIndicator")?.remove(); }
+
+/* ── 输入框自动高度 ── */
+inputBox.addEventListener("input", () => {
+  inputBox.style.height = "auto";
+  inputBox.style.height = Math.min(inputBox.scrollHeight, 120) + "px";
+});
+inputBox.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+/* ── 发送（流式 SSE 版本）── */
+async function sendMessage() {
+  if (!currentPersona) { openPicker(); return; }
+  const text = inputBox.value.trim();
+  if (!text || sendBtn.disabled) return;
+
+  appendBubble("user", text);
+  inputBox.value = "";
+  inputBox.style.height = "auto";
+  sendBtn.disabled = true;
+  statusText.textContent = "正在回复…";
+  showTyping();
+
+  const sid = localStorage.getItem(`sess_${currentPersona.id}`) || "";
+
+  let aiBubble = null;   // 气泡 div，收到第一个 chunk 后创建
+  let aiAvWrap = null;   // avatar 包裹层（用于后续挂情绪徽章）
+  let fullText = "";
+
+  try {
+    const res = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text, session_id: sid, persona_id: currentPersona.id, model: currentModel?.id }),
+    });
+
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let sseBuf = "";
+
+    outer: while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      sseBuf += decoder.decode(value, { stream: true });
+      const parts = sseBuf.split("\n\n");
+      sseBuf = parts.pop();            // 保留未完整的最后一段
+
+      for (const part of parts) {
+        const line = part.trim();
+        if (!line.startsWith("data: ")) continue;
+        const payload = line.slice(6).trim();
+        if (payload === "[DONE]") break outer;
+
+        let ev;
+        try { ev = JSON.parse(payload); } catch { continue; }
+
+        /* ── chunk：逐字追加 ── */
+        if (ev.type === "chunk") {
+          if (!aiBubble) {
+            hideTyping();
+            const row = document.createElement("div");
+            row.className = "msg-row ai";
+            aiAvWrap = document.createElement("div");
+            aiAvWrap.className = "av-wrap";
+            const av = document.createElement("div");
+            av.className = "msg-avatar";
+            av.textContent = currentPersona.avatar;
+            aiAvWrap.appendChild(av);
+            aiBubble = document.createElement("div");
+            aiBubble.className = "bubble streaming";
+            row.appendChild(aiAvWrap);
+            row.appendChild(aiBubble);
+            chatArea.appendChild(row);
+          }
+          fullText += ev.text;
+          aiBubble.textContent = fullText;
+          chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        /* ── meta：流结束，应用情绪样式 + 更新 UI ── */
+        if (ev.type === "meta") {
+          if (aiBubble) {
+            aiBubble.classList.remove("streaming");
+            const emo = ev.emotion || "平静";
+            notifyRobot(emo);                       // → 机器人做对应动作
+            aiBubble.classList.add(`e-${emo}`);
+            if (emo !== "平静") {
+              const cfg = EMOTION[emo];
+              if (cfg) {
+                const badge = document.createElement("div");
+                badge.className = "emotion-badge";
+                badge.textContent = cfg.emoji;
+                aiAvWrap.appendChild(badge);
+              }
+            }
+          }
+          if (ev.session_id) localStorage.setItem(`sess_${currentPersona.id}`, ev.session_id);
+          if (ev.memory_updated) {
+            appendMemoryNotice(ev.profile_updated);
+            showToast(ev.profile_updated ? "🧠 记忆整理完毕，对你更了解了～" : "🧠 记忆已整理");
+          }
+          turnBadge.textContent = `第 ${ev.turn_count} 轮`;
+          if ((ev.chain_length || 0) > 0) {
+            chainBadge.textContent = `🧠 ${ev.chain_length} 段记忆`;
+            chainBadge.classList.remove("hidden");
+          }
+          const ecfg = EMOTION[ev.emotion];
+          if (ecfg && ev.emotion !== "平静") {
+            statusText.textContent = `在线 ${ecfg.emoji}`;
+            setTimeout(() => { statusText.textContent = "在线"; }, 2000);
+          }
+        }
+
+        /* ── error ── */
+        if (ev.type === "error") {
+          hideTyping();
+          appendBubble("ai", "哎呀，出了点小问题，稍后再试试吧 😢", "担心");
+        }
+      }
+    }
+
+    if (!aiBubble) {          // 一个 chunk 也没收到
+      hideTyping();
+      appendBubble("ai", "网络好像断了，稍等一下 😔", "担心");
+    }
+
+  } catch {
+    hideTyping();
+    if (aiBubble) aiBubble.classList.remove("streaming");
+    else appendBubble("ai", "网络好像断了，稍等一下 😔", "担心");
+  }
+
+  sendBtn.disabled = false;
+  statusText.textContent = "在线";
+  inputBox.focus();
+}
+
+/* ══════════════ 语音：ASR / LLM / TTS 双流式 ══════════════ */
+const VOICE_WS_URL = `ws://${location.hostname}:5001/ws/voice`;
+
+/* Float32 → 16k PCM16（线性插值降采样） */
+function downsampleTo16kPCM(float32, inRate) {
+  const ratio = inRate / 16000;
+  const outLen = Math.floor(float32.length / ratio);
+  const out = new Int16Array(outLen);
+  for (let i = 0; i < outLen; i++) {
+    const idx = i * ratio, lo = Math.floor(idx);
+    const hi = Math.min(lo + 1, float32.length - 1), frac = idx - lo;
+    let s = float32[lo] * (1 - frac) + float32[hi] * frac;
+    s = Math.max(-1, Math.min(1, s));
+    out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+  }
+  return out;
+}
+
+class VoiceClient {
+  constructor() {
+    this.ws = null; this.connectedMode = null;
+    this.recording = false; this.handsFree = false;
+    this.micCtx = null; this.micStream = null; this.processor = null; this.source = null;
+    this.playCtx = null; this.playHead = 0; this.sources = []; this.playing = false;
+    this.aiBubble = null; this.aiAvWrap = null; this.aiText = ""; this.partial = null;
+    this.bargedThisSpeech = false;
+  }
+
+  async ensureConnected() {
+    const mode = this.handsFree ? "hands_free" : "ptt";
+    if (this.ws && this.ws.readyState === 1 && this.connectedMode === mode) return;
+    if (this.ws) { try { this.ws.close(); } catch {} this.ws = null; }
+    await new Promise((resolve, reject) => {
+      const ws = new WebSocket(VOICE_WS_URL);
+      ws.binaryType = "arraybuffer";
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          type: "start",
+          session_id: localStorage.getItem(`sess_${currentPersona.id}`) || "",
+          persona_id: currentPersona.id,
+          model: currentModel?.id,
+          mode,
+        }));
+        this.ws = ws; this.connectedMode = mode; resolve();
+      };
+      ws.onerror = () => reject(new Error("语音服务连接失败"));
+      ws.onclose = () => { if (this.ws === ws) this.ws = null; };
+      ws.onmessage = (e) => this.onMessage(e);
+    });
+  }
+
+  onMessage(e) {
+    if (e.data instanceof ArrayBuffer) { this.playPCM(e.data); return; }
+    let ev; try { ev = JSON.parse(e.data); } catch { return; }
+    switch (ev.type) {
+      case "ready":
+        if (ev.session_id) localStorage.setItem(`sess_${currentPersona.id}`, ev.session_id);
+        break;
+      case "asr_partial": this.showPartial(ev.text); break;
+      case "asr_final":
+        this.clearPartial();
+        if (ev.text) appendBubble("user", ev.text);
+        this.aiBubble = null; this.aiText = "";   // 下一个 llm_chunk 起新气泡
+        hideTyping(); showTyping();
+        break;
+      case "llm_chunk": this.appendAi(ev.text); break;
+      case "tts_start": this.ttsRate = ev.sample_rate || 24000; break;
+      case "tts_end": break;
+      case "stop_audio": this.stopPlayback(); break;
+      case "meta": this.applyMeta(ev); break;
+      case "error": showToast("语音出错：" + (ev.message || ""), 3000); break;
+    }
+  }
+
+  /* —— 用户语音实时预览 —— */
+  showPartial(text) {
+    if (!text) return;
+    if (!this.partial) {
+      const row = document.createElement("div"); row.className = "msg-row user";
+      const wrap = document.createElement("div"); wrap.className = "av-wrap";
+      const av = document.createElement("div"); av.className = "msg-avatar"; av.textContent = "🧑";
+      wrap.appendChild(av);
+      const b = document.createElement("div"); b.className = "bubble asr-preview";
+      row.appendChild(wrap); row.appendChild(b);
+      chatArea.appendChild(row);
+      this.partial = { row, b };
+    }
+    this.partial.b.textContent = text;
+    chatArea.scrollTop = chatArea.scrollHeight;
+  }
+  clearPartial() { if (this.partial) { this.partial.row.remove(); this.partial = null; } }
+
+  /* —— AI 文字流式（复用气泡样式）—— */
+  appendAi(text) {
+    if (!this.aiBubble) {
+      hideTyping();
+      const row = document.createElement("div"); row.className = "msg-row ai";
+      this.aiAvWrap = document.createElement("div"); this.aiAvWrap.className = "av-wrap";
+      const av = document.createElement("div"); av.className = "msg-avatar";
+      av.textContent = currentPersona.avatar; this.aiAvWrap.appendChild(av);
+      this.aiBubble = document.createElement("div"); this.aiBubble.className = "bubble streaming";
+      row.appendChild(this.aiAvWrap); row.appendChild(this.aiBubble);
+      chatArea.appendChild(row);
+    }
+    this.aiText += text; this.aiBubble.textContent = this.aiText;
+    chatArea.scrollTop = chatArea.scrollHeight;
+  }
+
+  applyMeta(ev) {
+    if (this.aiBubble) {
+      this.aiBubble.classList.remove("streaming");
+      const emo = ev.emotion || "平静";
+      notifyRobot(emo);                             // → 机器人做对应动作
+      this.aiBubble.classList.add(`e-${emo}`);
+      if (emo !== "平静" && EMOTION[emo]) {
+        const badge = document.createElement("div");
+        badge.className = "emotion-badge"; badge.textContent = EMOTION[emo].emoji;
+        this.aiAvWrap.appendChild(badge);
+      }
+    }
+    this.aiBubble = null; this.aiText = "";
+    if (ev.session_id) localStorage.setItem(`sess_${currentPersona.id}`, ev.session_id);
+    if (ev.memory_updated) {
+      appendMemoryNotice(ev.profile_updated);
+      showToast(ev.profile_updated ? "🧠 记忆整理完毕，对你更了解了～" : "🧠 记忆已整理");
+    }
+    turnBadge.textContent = `第 ${ev.turn_count} 轮`;
+    if ((ev.chain_length || 0) > 0) {
+      chainBadge.textContent = `🧠 ${ev.chain_length} 段记忆`;
+      chainBadge.classList.remove("hidden");
+    }
+  }
+
+  /* —— TTS 播放（PCM16 → Web Audio 无缝排队）—— */
+  playPCM(arrayBuffer) {
+    if (!this.playCtx) this.playCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const rate = this.ttsRate || 24000;
+    const i16 = new Int16Array(arrayBuffer);
+    if (!i16.length) return;
+    const f32 = new Float32Array(i16.length);
+    for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 0x8000;
+    const buf = this.playCtx.createBuffer(1, f32.length, rate);
+    buf.copyToChannel(f32, 0);
+    const src = this.playCtx.createBufferSource();
+    src.buffer = buf; src.connect(this.playCtx.destination);
+    const now = this.playCtx.currentTime;
+    if (this.playHead < now) this.playHead = now;
+    src.start(this.playHead); this.playHead += buf.duration; this.playing = true;
+    this.sources.push(src);
+    src.onended = () => { this.sources = this.sources.filter(s => s !== src); if (!this.sources.length) this.playing = false; };
+  }
+  stopPlayback() {
+    this.sources.forEach(s => { try { s.stop(); } catch {} });
+    this.sources = []; this.playHead = 0; this.playing = false;
+  }
+
+  /* —— 录音 —— */
+  async startRecording() {
+    if (this.recording) return;
+    await this.ensureConnected();
+    // 在用户手势内创建/恢复播放上下文，绕过自动播放策略
+    if (!this.playCtx) this.playCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (this.playCtx.state === "suspended") { try { await this.playCtx.resume(); } catch {} }
+    this.micStream = await navigator.mediaDevices.getUserMedia(
+      { audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+    this.micCtx = new (window.AudioContext || window.webkitAudioContext)();
+    this.source = this.micCtx.createMediaStreamSource(this.micStream);
+    this.processor = this.micCtx.createScriptProcessor(4096, 1, 1);
+    const inRate = this.micCtx.sampleRate;
+    this.bargedThisSpeech = false;
+    this.processor.onaudioprocess = (e) => {
+      if (!this.recording) return;
+      const data = e.inputBuffer.getChannelData(0);
+      // 免提下检测插话 → 打断 AI
+      if (this.handsFree && this.playing && !this.bargedThisSpeech) {
+        let sum = 0; for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+        if (Math.sqrt(sum / data.length) > 0.04) {
+          this.bargedThisSpeech = true;
+          if (this.ws?.readyState === 1) this.ws.send(JSON.stringify({ type: "barge_in" }));
+          this.stopPlayback();
+        }
+      }
+      const pcm = downsampleTo16kPCM(data, inRate);
+      if (this.ws?.readyState === 1) this.ws.send(pcm.buffer);
+    };
+    this.source.connect(this.processor);
+    this.processor.connect(this.micCtx.destination);
+    this.recording = true;
+    micBtn.classList.add("recording");
+    statusText.textContent = "聆听中…";
+  }
+  stopRecording() {
+    if (!this.recording) return;
+    this.recording = false;
+    micBtn.classList.remove("recording");
+    statusText.textContent = "在线";
+    if (this.processor) { this.processor.disconnect(); this.processor.onaudioprocess = null; this.processor = null; }
+    if (this.source) { this.source.disconnect(); this.source = null; }
+    if (this.micStream) { this.micStream.getTracks().forEach(t => t.stop()); this.micStream = null; }
+    if (this.micCtx) { this.micCtx.close(); this.micCtx = null; }
+  }
+}
+
+const voice = new VoiceClient();
+
+/* —— 按钮接线 —— */
+const micBtn = document.getElementById("micBtn");
+const hfToggle = document.getElementById("hfToggle");
+
+hfToggle.onclick = () => {
+  voice.handsFree = !voice.handsFree;
+  hfToggle.classList.toggle("active", voice.handsFree);
+  micBtn.title = voice.handsFree ? "点击开始/停止连续对话" : "按住说话";
+  if (!voice.handsFree && voice.recording) {   // 关掉免提时若在录，停掉
+    voice.stopRecording();
+    if (voice.ws?.readyState === 1) voice.ws.send(JSON.stringify({ type: "stop" }));
+  }
+  showToast(voice.handsFree ? "免提已开启，点麦克风开始连续对话" : "已切回按住说话");
+};
+
+async function micGuard(fn) {
+  if (!currentPersona) { openPicker(); return; }
+  try { await fn(); }
+  catch (e) { showToast("麦克风/语音连接失败：" + (e.message || e), 3000); voice.stopRecording(); }
+}
+
+/* PTT：按住说话；免提：点击开/关 */
+micBtn.addEventListener("mousedown", (e) => {
+  if (voice.handsFree) return;
+  e.preventDefault(); micGuard(() => voice.startRecording());
+});
+const pttRelease = () => {
+  if (voice.handsFree || !voice.recording) return;
+  voice.stopRecording();
+  if (voice.ws?.readyState === 1) voice.ws.send(JSON.stringify({ type: "stop" }));
+};
+micBtn.addEventListener("mouseup", pttRelease);
+micBtn.addEventListener("mouseleave", pttRelease);
+micBtn.addEventListener("touchstart", (e) => {
+  if (voice.handsFree) return;
+  e.preventDefault(); micGuard(() => voice.startRecording());
+}, { passive: false });
+micBtn.addEventListener("touchend", (e) => { e.preventDefault(); pttRelease(); }, { passive: false });
+
+micBtn.addEventListener("click", () => {
+  if (!voice.handsFree) return;   // 免提模式才用点击切换
+  if (voice.recording) {
+    voice.stopRecording();
+    if (voice.ws?.readyState === 1) voice.ws.send(JSON.stringify({ type: "end" }));
+    voice.connectedMode = null;   // 下次重连
+  } else {
+    micGuard(() => voice.startRecording());
+  }
+});
+
+init();
+</script>
+</body>
+</html>
